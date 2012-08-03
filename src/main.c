@@ -33,11 +33,14 @@
 
 #include <gdbus.h>
 
+#include "manager.h"
+
 #define SHUTDOWN_GRACE_SECONDS 10
 
 #define SAMSUNG_MODEM_MGR_SERVICE "org.samsung.modem.mgr"
 
 static GMainLoop *event_loop;
+static DBusConnection *connection;
 
 void __samsung_modem_mgr_exit(void)
 {
@@ -48,6 +51,11 @@ static gboolean quit_eventloop(gpointer user_data)
 {
 	__samsung_modem_mgr_exit();
 	return FALSE;
+}
+
+DBusConnection* get_dbus_connection(void)
+{
+	return connection;
 }
 
 static unsigned int __terminated = 0;
@@ -144,9 +152,9 @@ int main(int argc, char **argv)
 {
 	GOptionContext *context;
 	GError *err = NULL;
-	DBusConnection *conn;
 	DBusError error;
 	guint signal;
+	int rc;
 
 	context = g_option_context_new(NULL);
 	g_option_context_add_main_entries(context, options, NULL);
@@ -182,8 +190,8 @@ int main(int argc, char **argv)
 
 	dbus_error_init(&error);
 
-	conn = g_dbus_setup_bus(DBUS_BUS_SYSTEM, SAMSUNG_MODEM_MGR_SERVICE, &error);
-	if (conn == NULL) {
+	connection = g_dbus_setup_bus(DBUS_BUS_SYSTEM, SAMSUNG_MODEM_MGR_SERVICE, &error);
+	if (connection == NULL) {
 		if (dbus_error_is_set(&error) == TRUE) {
 			fprintf(stderr, "ERROR: Unable to hop onto D-Bus: %s\n",
 					error.message);
@@ -195,12 +203,18 @@ int main(int argc, char **argv)
 		goto cleanup;
 	}
 
-	g_dbus_set_disconnect_function(conn, system_bus_disconnected,
+	g_dbus_set_disconnect_function(connection, system_bus_disconnected,
 					NULL, NULL);
+
+	rc = __manager_init();
+	if (rc < 0)
+		goto cleanup;
 
 	g_main_loop_run(event_loop);
 
-	dbus_connection_unref(conn);
+	__manager_cleanup();
+
+	dbus_connection_unref(connection);
 
 cleanup:
 	g_source_remove(signal);
