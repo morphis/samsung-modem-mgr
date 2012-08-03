@@ -1,0 +1,45 @@
+Manager hierarchy
+=================
+
+Service		org.samsung.modem.mgr
+Interface	org.samsung.modem.Manager
+Object path	/
+
+Methods		dict GetProperties()
+
+			Returns all network registration properties. See the
+			properties section for available properties.
+
+			void SetProperty(string property, variant value)
+
+			Sets the given property value to that specified in
+			call parameter.
+
+			Possible Errors: [service].Error.NotAvailable
+					 [service].Error.InProgress
+					 [service].Error.NotImplemented
+					 [service].Error.InvalidArguments
+					 [service].Error.InvalidFormat
+					 [service].Error.Failed
+
+Signals		PropertyChanged(string property, variant value)
+
+			This signal indicates a changed value of the given
+			property.
+
+Properties	boolean Powered [readwrite]
+
+			Boolean representing the power state of the modem
+			device. Setting this to true will starting the
+			initialization process for the modem. The status
+			of the modem will be change to "initializing".
+
+			string Status [readonly]
+
+			The current status of the modem.
+
+			The possible values are:
+				"offline"         Modem is offline and not available.
+				"initializing"    Modem is currrently initializing. Next
+				                  state will be "online".
+				"online"          Modem is fully powered and ready for use.
