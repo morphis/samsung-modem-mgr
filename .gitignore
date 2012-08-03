@@ -28,3 +28,6 @@ stamp-h1
 *.pc
 build
 core
+samsung-modem-mgr
+samsung-modem-mgr.service
+!samsung-modem-mgr.service.in
