@@ -25,6 +25,7 @@
 #include <gdbus.h>
 
 #include "main.h"
+#include "dbus.h"
 
 #define SAMSUNG_MODEM_MANAGER_PATH			"/"
 #define SAMSUNG_MODEM_MANAGER_INTERFACE		"org.samsung.modem.Manager"
@@ -32,13 +33,55 @@
 static DBusMessage *manager_get_properties(DBusConnection *conn,
 						DBusMessage *msg, void *data)
 {
-	return __dbus_error_failed(msg);
+	DBusMessage *reply;
+	DBusMessageIter iter, dict;
+
+	reply = dbus_message_new_method_return(msg);
+	if (reply == NULL)
+		return NULL;
+
+	dbus_message_iter_init_append(reply, &iter);
+
+	dbus_message_iter_open_container(&iter, DBUS_TYPE_ARRAY,
+					PROPERTIES_ARRAY_SIGNATURE,
+					&dict);
+
+	char *status = "unknown";
+	__dbus_dict_append(&dict, "status", DBUS_TYPE_STRING, &status);
+
+	dbus_message_iter_close_container(&iter, &dict);
+
+	return reply;
 }
 
 static DBusMessage *manager_set_property(DBusConnection *conn, DBusMessage *msg,
 					void *data)
 {
-	return __dbus_error_failed(msg);
+	DBusMessageIter iter;
+	DBusMessageIter var;
+	const char *property;
+
+	if (!dbus_message_iter_init(msg, &iter))
+		return __dbus_error_invalid_args(msg);
+
+	if (dbus_message_iter_get_arg_type(&iter) != DBUS_TYPE_STRING)
+		return __dbus_error_invalid_args(msg);
+
+	dbus_message_iter_get_basic(&iter, &property);
+	dbus_message_iter_next(&iter);
+
+	if (dbus_message_iter_get_arg_type(&iter) != DBUS_TYPE_VARIANT)
+		return __dbus_error_invalid_args(msg);
+
+	dbus_message_iter_recurse(&iter, &var);
+
+	if (g_str_equal(property, "Powered") == TRUE) {
+		__dbus_pending_reply(msg,
+				dbus_message_new_method_return(msg));
+		return NULL;
+	}
+
+	return __dbus_error_invalid_args(msg);
 }
 
 static const GDBusMethodTable manager_methods[] = {
