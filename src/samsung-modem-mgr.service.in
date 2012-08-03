@@ -1,0 +1,11 @@
+[Unit]
+Description=Samsung Modem Management daemon
+After=syslog.target
+
+[Service]
+Type=dbus
+BusName=org.samsung.modem.mgr
+ExecStart=@prefix@/sbin/samsung-modem-mgr -n
+
+[Install]
+WantedBy=multi-user.target

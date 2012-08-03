@@ -1,4 +1,4 @@
-AC_INIT([samsung-modem-mgr], [0.2.0], [morphis@gravedo.de], [samsung-modem-mgr])
+AC_INIT([samsung-modem-mgr], [0.1.0], [morphis@gravedo.de], [samsung-modem-mgr])
 AC_CONFIG_SRCDIR([Makefile.am])
 AC_CONFIG_HEADERS(config.h)
 AM_INIT_AUTOMAKE([dist-bzip2 subdir-objects])
@@ -16,17 +16,55 @@ AC_SUBST(LDFLAGS)
 
 PKG_PROG_PKG_CONFIG
 
+GLIB_REQUIRED=2.28
+PKG_CHECK_MODULES(GLIB,
+	glib-2.0 >= GLIB_REQUIRED)
+AC_SUBST(GLIB_CFLAGS)
+AC_SUBST(GLIB_LIBS)
+
+DBUS_REQUIRED=1.4
+PKG_CHECK_MODULES(DBUS,
+	dbus-1 >= 1.4)
+AC_SUBST(DBUS_CFLAGS)
+AC_SUBST(DBUS_LIBS)
+
 AC_ARG_ENABLE(debug,
   [  --enable-debug            Enable debug build (default=disabled)],
   [debug=$enableval],
   [debug="no"])
 AM_CONDITIONAL( [WANT_DEBUG], [test x"$debug" = x"yes"])
 
+AC_ARG_ENABLE(datafiles, AC_HELP_STRING([--disable-datafiles],
+			[do not install configuration and data files]),
+					[enable_datafiles=${enableval}])
+AM_CONDITIONAL(DATAFILES, test "${enable_datafiles}" != "no")
+
+AC_ARG_WITH(dbusconfdir, AC_HELP_STRING([--with-dbusconfdir=PATH],
+	[path to D-Bus config directory]), [path_dbusconf=${withval}],
+		[path_dbusconf="`$PKG_CONFIG --variable=sysconfdir dbus-1`"])
+if (test -z "${path_dbusconf}"); then
+	DBUS_CONFDIR="${sysconfdir}/dbus-1/system.d"
+else
+	DBUS_CONFDIR="${path_dbusconf}/dbus-1/system.d"
+fi
+AC_SUBST(DBUS_CONFDIR)
+
+AC_ARG_WITH([systemdunitdir], AC_HELP_STRING([--with-systemdunitdir=DIR],
+	[path to systemd service directory]), [path_systemdunit=${withval}],
+		[path_systemdunit="`$PKG_CONFIG --variable=systemdsystemunitdir systemd`"])
+if (test -n "${path_systemdunit}"); then
+	SYSTEMD_UNITDIR="${path_systemdunit}"
+	AC_SUBST(SYSTEMD_UNITDIR)
+fi
+AM_CONDITIONAL(SYSTEMD, test -n "${path_systemdunit}")
+
 AC_CONFIG_FILES([
-    Makefile
+	Makefile
+	src/samsung-modem-mgr.service
 ])
 AC_OUTPUT
 
+echo
 echo "------------------------------------------------------------------------"
 echo "$PACKAGE_NAME $PACKAGE_VERSION"
 echo "------------------------------------------------------------------------"
@@ -36,6 +74,16 @@ echo
 echo "  debug build.............: $debug"
 echo
 echo "  prefix..................: $prefix"
+echo
+echo "  dbus config directory...: $DBUS_CONFDIR"
+echo
+if (test -n "${path_systemdunit}"); then
+	echo "  systemd support.........: yes"
+	echo
+	echo "  systemd unit directory..: $SYSTEMD_UNITDIR"
+else
+	echo "  systemd support.........: no"
+fi
 echo
 echo "------------------------------------------------------------------------"
 echo

@@ -1,4 +1,34 @@
-SUBDIRS =
+bin_PROGRAMS = src/samsung-modem-mgr
+
+DEBUG_CFLAGS =
+if WANT_DEBUG
+DEBUG_CFLAGS += -g -O0
+endif
+
+src_samsung_modem_mgr_SOURCES = \
+	src/main.c \
+	gdbus/mainloop.c \
+	gdbus/object.c \
+	gdbus/watch.c \
+	gdbus/polkit.c
+src_samsung_modem_mgr_CFLAGS = \
+	$(DEBUG_CFLAGS) \
+	$(GLIB_CFLAGS) \
+	$(DBUS_CFLAGS) \
+	-I$(top_srcdir)/gdbus
+src_samsung_modem_mgr_LDFLAGS = \
+	$(GLIB_LIBS) \
+	$(DBUS_LIBS)
+
+if DATAFILES
+dbusconfdir = @DBUS_CONFDIR@
+dist_dbusconf_DATA = src/samsung-modem-mgr.conf
+if SYSTEMD
+systemdunitdir = @SYSTEMD_UNITDIR@
+systemdunit_DATA = src/samsung-modem-mgr.service
+endif
+endif
+
 
 EXTRA_DIST = \
 	MAINTAINERS
