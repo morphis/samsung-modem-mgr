@@ -23,8 +23,11 @@
 #ifndef MAIN_H_
 #define MAIN_H_
 
-int __manager_init(void);
-void __manager_cleanup(void);
+struct manager;
+
+struct manager *manager_create(void);
+int manager_init(struct manager *manager);
+void manager_cleanup(struct manager *manager);
 
 #endif
 

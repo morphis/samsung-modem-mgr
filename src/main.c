@@ -41,6 +41,7 @@
 
 static GMainLoop *event_loop;
 static DBusConnection *connection;
+static struct manager *manager;
 
 void __samsung_modem_mgr_exit(void)
 {
@@ -206,13 +207,17 @@ int main(int argc, char **argv)
 	g_dbus_set_disconnect_function(connection, system_bus_disconnected,
 					NULL, NULL);
 
-	rc = __manager_init();
+	manager = manager_create();
+	if (manager == NULL)
+		goto cleanup;
+
+	rc = manager_init(manager);
 	if (rc < 0)
 		goto cleanup;
 
 	g_main_loop_run(event_loop);
 
-	__manager_cleanup();
+	manager_cleanup(manager);
 
 	dbus_connection_unref(connection);
 

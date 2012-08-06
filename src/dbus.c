@@ -42,6 +42,13 @@ DBusMessage *__dbus_error_failed(DBusMessage *msg)
 					"Operation failed");
 }
 
+DBusMessage *__dbus_error_busy(DBusMessage *msg)
+{
+	return g_dbus_create_error(msg, SAMSUNG_MODEM_ERROR_INTERFACE
+					".Busy",
+					"Manager is busy");
+}
+
 static void append_variant(DBusMessageIter *iter,
 				int type, void *value)
 {
@@ -88,6 +95,29 @@ void __dbus_pending_reply(DBusMessage **msg, DBusMessage *reply)
 
 	dbus_message_unref(*msg);
 	*msg = NULL;
+}
+
+int __dbus_signal_property_changed(DBusConnection *conn,
+					const char *path,
+					const char *interface,
+					const char *name,
+					int type, void *value)
+{
+	DBusMessage *signal;
+	DBusMessageIter iter;
+
+	signal = dbus_message_new_signal(path, interface, "PropertyChanged");
+	if (signal == NULL) {
+		return -1;
+	}
+
+	dbus_message_iter_init_append(signal, &iter);
+
+	dbus_message_iter_append_basic(&iter, DBUS_TYPE_STRING, &name);
+
+	append_variant(&iter, type, value);
+
+	return g_dbus_send_message(conn, signal);
 }
 
 // vim:ts=4:sw=4:noexpandtab

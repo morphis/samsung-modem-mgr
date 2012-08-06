@@ -21,6 +21,7 @@
  */
 
 #include <string.h>
+#include <stdio.h>
 #include <glib.h>
 #include <gdbus.h>
 
@@ -30,11 +31,39 @@
 #define SAMSUNG_MODEM_MANAGER_PATH			"/"
 #define SAMSUNG_MODEM_MANAGER_INTERFACE		"org.samsung.modem.Manager"
 
+enum modem_state {
+	OFFLINE,
+	INITIALIZING,
+	ONLINE
+};
+
+struct manager {
+	enum modem_state state;
+	gboolean powered;
+};
+
+const char* modem_state_to_string(enum modem_state state)
+{
+	switch (state)
+	{
+		case OFFLINE:
+			return "offline";
+		case INITIALIZING:
+			return "initializing";
+		case ONLINE:
+			return "online";
+	}
+
+	return "unknown";
+}
+
 static DBusMessage *manager_get_properties(DBusConnection *conn,
 						DBusMessage *msg, void *data)
 {
 	DBusMessage *reply;
 	DBusMessageIter iter, dict;
+	struct manager *mgr = data;
+	const char *status;
 
 	reply = dbus_message_new_method_return(msg);
 	if (reply == NULL)
@@ -46,12 +75,46 @@ static DBusMessage *manager_get_properties(DBusConnection *conn,
 					PROPERTIES_ARRAY_SIGNATURE,
 					&dict);
 
-	char *status = "unknown";
-	__dbus_dict_append(&dict, "status", DBUS_TYPE_STRING, &status);
+	status = modem_state_to_string(mgr->state);
+	__dbus_dict_append(&dict, "Status", DBUS_TYPE_STRING, &status);
+
+	__dbus_dict_append(&dict, "Powered", DBUS_TYPE_BOOLEAN, &mgr->powered);
 
 	dbus_message_iter_close_container(&iter, &dict);
 
 	return reply;
+}
+
+static int set_powered(DBusConnection *conn, struct manager *mgr, gboolean powered)
+{
+	const char *status;
+
+	if (powered)
+	{
+		mgr->state = INITIALIZING;
+
+		status = modem_state_to_string(mgr->state);
+		__dbus_signal_property_changed(conn, SAMSUNG_MODEM_MANAGER_PATH,
+						SAMSUNG_MODEM_MANAGER_INTERFACE,
+						"Status", DBUS_TYPE_STRING,
+						&status);
+
+		mgr->state = ONLINE;
+	}
+	else
+	{
+		mgr->state = OFFLINE;
+	}
+
+	status = modem_state_to_string(mgr->state);
+	__dbus_signal_property_changed(conn, SAMSUNG_MODEM_MANAGER_PATH,
+		SAMSUNG_MODEM_MANAGER_INTERFACE,
+		"Status", DBUS_TYPE_STRING,
+		&status);
+
+	mgr->powered = powered;
+
+	return 0;
 }
 
 static DBusMessage *manager_set_property(DBusConnection *conn, DBusMessage *msg,
@@ -60,6 +123,7 @@ static DBusMessage *manager_set_property(DBusConnection *conn, DBusMessage *msg,
 	DBusMessageIter iter;
 	DBusMessageIter var;
 	const char *property;
+	struct manager *mgr = data;
 
 	if (!dbus_message_iter_init(msg, &iter))
 		return __dbus_error_invalid_args(msg);
@@ -76,8 +140,33 @@ static DBusMessage *manager_set_property(DBusConnection *conn, DBusMessage *msg,
 	dbus_message_iter_recurse(&iter, &var);
 
 	if (g_str_equal(property, "Powered") == TRUE) {
-		__dbus_pending_reply(msg,
-				dbus_message_new_method_return(msg));
+		gboolean powered = FALSE;
+		int err;
+
+		if (dbus_message_iter_get_arg_type(&var) != DBUS_TYPE_BOOLEAN)
+			return __dbus_error_invalid_args(msg);
+
+		dbus_message_iter_get_basic(&var, &powered);
+
+		if (mgr->state == INITIALIZING)
+			return __dbus_error_busy(msg);
+
+		if (mgr->powered == powered)
+			return dbus_message_new_method_return(msg);
+
+		g_dbus_send_reply(conn, msg, DBUS_TYPE_INVALID);
+
+		err = set_powered(conn, mgr, powered);
+		if (err < 0)
+			return NULL;
+
+		__dbus_signal_property_changed(conn, SAMSUNG_MODEM_MANAGER_PATH,
+						SAMSUNG_MODEM_MANAGER_INTERFACE,
+						"Powered", DBUS_TYPE_BOOLEAN,
+						&powered);
+
+		mgr->powered = powered;
+
 		return NULL;
 	}
 
@@ -100,7 +189,23 @@ static const GDBusSignalTable manager_signals[] = {
 	{ }
 };
 
-int __manager_init(void)
+
+struct manager *manager_create(void)
+{
+	struct manager *mgr = NULL;
+
+	mgr = g_try_new0(struct manager, 1);
+
+	if (mgr == NULL)
+		return NULL;
+
+	mgr->state = OFFLINE;
+	mgr->powered = FALSE;
+
+	return mgr;
+}
+
+int manager_init(struct manager *mgr)
 {
 	DBusConnection *conn;
 	gboolean ret;
@@ -110,7 +215,7 @@ int __manager_init(void)
 	ret = g_dbus_register_interface(conn, SAMSUNG_MODEM_MANAGER_PATH,
 					SAMSUNG_MODEM_MANAGER_INTERFACE,
 					manager_methods, manager_signals,
-					NULL, NULL, NULL);
+					NULL, mgr, NULL);
 
 	if (ret == FALSE)
 		return -1;
@@ -118,12 +223,14 @@ int __manager_init(void)
 	return 0;
 }
 
-void __manager_cleanup(void)
+void manager_cleanup(struct manager *mgr)
 {
 	DBusConnection *conn = get_dbus_connection();
 
 	g_dbus_unregister_interface(conn, SAMSUNG_MODEM_MANAGER_PATH,
 					SAMSUNG_MODEM_MANAGER_INTERFACE);
+
+	g_free(mgr);
 }
 
 // vim:ts=4:sw=4:noexpandtab

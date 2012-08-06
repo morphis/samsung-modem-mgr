@@ -31,6 +31,7 @@
 
 DBusMessage *__dbus_error_invalid_args(DBusMessage *msg);
 DBusMessage *__dbus_error_failed(DBusMessage *msg);
+DBusMessage *__dbus_error_busy(DBusMessage *msg);
 void __dbus_dict_append(DBusMessageIter *dict,
 			const char *key, int type, void *value);
 
