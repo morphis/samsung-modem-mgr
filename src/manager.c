@@ -25,6 +25,8 @@
 #include <glib.h>
 #include <gdbus.h>
 
+#include <radio.h>
+
 #include "main.h"
 #include "dbus.h"
 
@@ -38,6 +40,7 @@ enum modem_state {
 };
 
 struct manager {
+	struct ipc_client *client;
 	enum modem_state state;
 	gboolean powered;
 };
@@ -99,10 +102,14 @@ static int set_powered(DBusConnection *conn, struct manager *mgr, gboolean power
 						"Status", DBUS_TYPE_STRING,
 						&status);
 
+		ipc_client_power_on(mgr->client);
+		ipc_client_bootstrap_modem(mgr->client);
+
 		mgr->state = ONLINE;
 	}
 	else
 	{
+		ipc_client_power_off(mgr->client);
 		mgr->state = OFFLINE;
 	}
 
@@ -201,6 +208,7 @@ struct manager *manager_create(void)
 
 	mgr->state = OFFLINE;
 	mgr->powered = FALSE;
+	mgr->client = ipc_client_new(IPC_CLIENT_TYPE_FMT);
 
 	return mgr;
 }
@@ -229,6 +237,8 @@ void manager_cleanup(struct manager *mgr)
 
 	g_dbus_unregister_interface(conn, SAMSUNG_MODEM_MANAGER_PATH,
 					SAMSUNG_MODEM_MANAGER_INTERFACE);
+
+	ipc_client_free(mgr->client);
 
 	g_free(mgr);
 }

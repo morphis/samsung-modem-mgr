@@ -17,10 +17,12 @@ src_samsung_modem_mgr_CFLAGS = \
 	$(DEBUG_CFLAGS) \
 	$(GLIB_CFLAGS) \
 	$(DBUS_CFLAGS) \
+	$(SAMSUNG_IPC_CFLAGS) \
 	-I$(top_srcdir)/gdbus
 src_samsung_modem_mgr_LDFLAGS = \
 	$(GLIB_LIBS) \
-	$(DBUS_LIBS)
+	$(DBUS_LIBS) \
+	$(SAMSUNG_IPC_LIBS)
 
 if DATAFILES
 dbusconfdir = @DBUS_CONFDIR@
