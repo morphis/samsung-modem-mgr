@@ -28,6 +28,9 @@ PKG_CHECK_MODULES(DBUS,
 AC_SUBST(DBUS_CFLAGS)
 AC_SUBST(DBUS_LIBS)
 
+PKG_CHECK_MODULES(SAMSUNG_IPC,
+	samsung-ipc-1.0 >= 0.2)
+
 AC_ARG_ENABLE(debug,
   [  --enable-debug            Enable debug build (default=disabled)],
   [debug=$enableval],
