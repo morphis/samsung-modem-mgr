@@ -88,6 +88,22 @@ static DBusMessage *manager_get_properties(DBusConnection *conn,
 	return reply;
 }
 
+static void notify_status_changed(DBusConnection *conn, enum modem_state state)
+{
+	const char *status = modem_state_to_string(state);
+	__dbus_signal_property_changed(conn, SAMSUNG_MODEM_MANAGER_PATH,
+		SAMSUNG_MODEM_MANAGER_INTERFACE,
+		"Status", DBUS_TYPE_STRING,
+		&status);
+}
+
+static void notify_powered_changed(DBusConnection *conn, gboolean powered)
+{
+	__dbus_signal_property_changed(conn, SAMSUNG_MODEM_MANAGER_PATH,
+		SAMSUNG_MODEM_MANAGER_INTERFACE,
+		"Powered", DBUS_TYPE_BOOLEAN,
+		&powered);
+}
 static int set_powered(DBusConnection *conn, struct manager *mgr, gboolean powered)
 {
 	const char *status;
@@ -96,30 +112,33 @@ static int set_powered(DBusConnection *conn, struct manager *mgr, gboolean power
 	{
 		mgr->state = INITIALIZING;
 
-		status = modem_state_to_string(mgr->state);
-		__dbus_signal_property_changed(conn, SAMSUNG_MODEM_MANAGER_PATH,
-						SAMSUNG_MODEM_MANAGER_INTERFACE,
-						"Status", DBUS_TYPE_STRING,
-						&status);
+		notify_status_changed(conn, mgr->state);
 
-		ipc_client_power_on(mgr->client);
-		ipc_client_bootstrap_modem(mgr->client);
+		if (ipc_client_power_on(mgr->client) < 0) {
+			mgr->state = OFFLINE;
+		}
+		else {
+			notify_powered_changed(conn, powered);
 
-		mgr->state = ONLINE;
+			if (ipc_client_bootstrap_modem(mgr->client) < 0) {
+				notify_powered_changed(conn, FALSE);
+				mgr->state = OFFLINE;
+			}
+			else {
+				mgr->state = ONLINE;
+			}
+		}
 	}
-	else
-	{
+	else {
 		ipc_client_power_off(mgr->client);
+
+		mgr->powered = powered;
+		notify_powered_changed(conn, powered);
+
 		mgr->state = OFFLINE;
 	}
 
-	status = modem_state_to_string(mgr->state);
-	__dbus_signal_property_changed(conn, SAMSUNG_MODEM_MANAGER_PATH,
-		SAMSUNG_MODEM_MANAGER_INTERFACE,
-		"Status", DBUS_TYPE_STRING,
-		&status);
-
-	mgr->powered = powered;
+	notify_status_changed(conn, mgr->state);
 
 	return 0;
 }
@@ -166,13 +185,6 @@ static DBusMessage *manager_set_property(DBusConnection *conn, DBusMessage *msg,
 		err = set_powered(conn, mgr, powered);
 		if (err < 0)
 			return NULL;
-
-		__dbus_signal_property_changed(conn, SAMSUNG_MODEM_MANAGER_PATH,
-						SAMSUNG_MODEM_MANAGER_INTERFACE,
-						"Powered", DBUS_TYPE_BOOLEAN,
-						&powered);
-
-		mgr->powered = powered;
 
 		return NULL;
 	}
