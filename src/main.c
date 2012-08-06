@@ -37,7 +37,7 @@
 
 #define SHUTDOWN_GRACE_SECONDS 10
 
-#define SAMSUNG_MODEM_MGR_SERVICE "org.samsung.modem.mgr"
+#define SAMSUNG_MODEM_MGR_SERVICE "org.samsung.modem"
 
 static GMainLoop *event_loop;
 static DBusConnection *connection;

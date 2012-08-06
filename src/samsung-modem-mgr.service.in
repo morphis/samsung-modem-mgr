@@ -4,7 +4,7 @@ After=syslog.target
 
 [Service]
 Type=dbus
-BusName=org.samsung.modem.mgr
+BusName=org.samsung.modem
 ExecStart=@prefix@/sbin/samsung-modem-mgr -n
 
 [Install]
