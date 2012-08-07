@@ -120,6 +120,7 @@ static int set_powered(DBusConnection *conn, struct manager *mgr, gboolean power
 		}
 		else {
 			notify_powered_changed(conn, powered);
+			mgr->powered = powered;
 			mgr->state = ONLINE;
 		}
 	}
