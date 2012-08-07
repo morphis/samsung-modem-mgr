@@ -1,4 +1,4 @@
-bin_PROGRAMS = src/samsung-modem-mgr
+sbin_PROGRAMS = src/samsung-modem-mgr
 
 DEBUG_CFLAGS =
 if WANT_DEBUG
