@@ -114,19 +114,13 @@ static int set_powered(DBusConnection *conn, struct manager *mgr, gboolean power
 
 		notify_status_changed(conn, mgr->state);
 
-		if (ipc_client_power_on(mgr->client) < 0) {
+		if (ipc_client_bootstrap_modem(mgr->client) < 0 ||
+			ipc_client_power_on(mgr->client) < 0) {
 			mgr->state = OFFLINE;
 		}
 		else {
 			notify_powered_changed(conn, powered);
-
-			if (ipc_client_bootstrap_modem(mgr->client) < 0) {
-				notify_powered_changed(conn, FALSE);
-				mgr->state = OFFLINE;
-			}
-			else {
-				mgr->state = ONLINE;
-			}
+			mgr->state = ONLINE;
 		}
 	}
 	else {
