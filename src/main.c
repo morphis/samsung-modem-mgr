@@ -139,6 +139,7 @@ static void system_bus_disconnected(DBusConnection *conn, void *user_data)
 
 static gboolean option_detach = FALSE;
 static gboolean option_version = FALSE;
+static gboolean option_debug = FALSE;
 
 static GOptionEntry options[] = {
 	{ "nodetach", 'n', G_OPTION_FLAG_REVERSE,
@@ -146,6 +147,9 @@ static GOptionEntry options[] = {
 				"Don't run as daemon in background" },
 	{ "version", 'v', 0, G_OPTION_ARG_NONE, &option_version,
 				"Show version information and exit" },
+	{ "debug", 'd', G_OPTION_FLAG_REVERSE,
+				G_OPTION_ARG_NONE, &option_debug,
+				"Output debug information" },
 	{ NULL },
 };
 
