@@ -35,7 +35,7 @@
 
 #include "manager.h"
 
-#define SHUTDOWN_GRACE_SECONDS 10
+#define SHUTDOWN_GRACE_SECONDS 2
 
 #define SAMSUNG_MODEM_MGR_SERVICE "org.samsung.modem"
 
