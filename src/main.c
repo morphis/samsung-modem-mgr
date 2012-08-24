@@ -81,7 +81,7 @@ static gboolean signal_handler(GIOChannel *channel, GIOCondition cond,
 	case SIGINT:
 	case SIGTERM:
 		if (__terminated == 0) {
-			fprintf(stdout, "INFO: Terminating\n");
+			g_message("Terminating");
 			g_timeout_add_seconds(SHUTDOWN_GRACE_SECONDS,
 						quit_eventloop, NULL);
 		}
@@ -161,6 +161,8 @@ int main(int argc, char **argv)
 	guint signal;
 	int rc;
 
+	g_message("Samsung Modem Manager %s", VERSION);
+
 	context = g_option_context_new(NULL);
 	g_option_context_add_main_entries(context, options, NULL);
 
@@ -168,11 +170,11 @@ int main(int argc, char **argv)
 		if (err != NULL) {
 			g_printerr("%s\n", err->message);
 			g_error_free(err);
-			return 1;
+			exit(1);
 		}
 
 		g_printerr("An unknown error occurred\n");
-		return 1;
+		exit(1);
 	}
 
 	g_option_context_free(context);
@@ -198,11 +200,11 @@ int main(int argc, char **argv)
 	connection = g_dbus_setup_bus(DBUS_BUS_SYSTEM, SAMSUNG_MODEM_MGR_SERVICE, &error);
 	if (connection == NULL) {
 		if (dbus_error_is_set(&error) == TRUE) {
-			fprintf(stderr, "ERROR: Unable to hop onto D-Bus: %s\n",
+			g_error("Unable to hop onto D-Bus: %s\n",
 					error.message);
 			dbus_error_free(&error);
 		} else {
-			fprintf(stderr, "ERROR: Unable to hop onto D-Bus\n");
+			g_error("Unable to hop onto D-Bus\n");
 		}
 
 		goto cleanup;

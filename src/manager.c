@@ -133,6 +133,8 @@ static int set_powered(DBusConnection *conn, struct manager *mgr, gboolean power
 		mgr->state = OFFLINE;
 	}
 
+	g_debug("Changed manager power state to %s", powered ? "online" : "offline");
+
 	notify_status_changed(conn, mgr->state);
 
 	return 0;
@@ -234,6 +236,8 @@ int manager_init(struct manager *mgr)
 
 	if (ret == FALSE)
 		return -1;
+
+	g_debug("Initialized DBus manager interface");
 
 	return 0;
 }
