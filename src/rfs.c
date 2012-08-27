@@ -94,6 +94,10 @@ int rfs_manager_start(struct rfs_manager *mgr)
 	ipc_client_open(mgr->client);
 
 	fd = ipc_client_get_handlers_common_data_fd(mgr->client);
+
+	if (fd < 0)
+		return -1;
+
 	mgr->io = g_io_channel_unix_new(fd);
 
 	g_io_channel_set_encoding(mgr->io, NULL, NULL);
