@@ -29,6 +29,7 @@
 
 #include "main.h"
 #include "dbus.h"
+#include "rfs.h"
 
 #define SAMSUNG_MODEM_MANAGER_PATH			"/"
 #define SAMSUNG_MODEM_MANAGER_INTERFACE		"org.samsung.modem.Manager"
@@ -41,6 +42,7 @@ enum modem_state {
 
 struct manager {
 	struct ipc_client *client;
+	struct rfs_manager *rfs;
 	enum modem_state state;
 	gboolean powered;
 };
@@ -115,7 +117,8 @@ static int set_powered(DBusConnection *conn, struct manager *mgr, gboolean power
 		notify_status_changed(conn, mgr->state);
 
 		if (ipc_client_bootstrap_modem(mgr->client) < 0 ||
-			ipc_client_power_on(mgr->client) < 0) {
+			ipc_client_power_on(mgr->client) < 0 ||
+			rfs_manager_start(mgr->rfs) < 0) {
 			mgr->state = OFFLINE;
 		}
 		else {
@@ -125,6 +128,8 @@ static int set_powered(DBusConnection *conn, struct manager *mgr, gboolean power
 		}
 	}
 	else {
+		rfs_manager_stop(mgr->rfs);
+
 		ipc_client_power_off(mgr->client);
 
 		mgr->powered = powered;
@@ -218,6 +223,7 @@ struct manager *manager_create(void)
 	mgr->state = OFFLINE;
 	mgr->powered = FALSE;
 	mgr->client = ipc_client_new(IPC_CLIENT_TYPE_FMT);
+	mgr->rfs = rfs_manager_new();
 
 	return mgr;
 }
@@ -250,6 +256,7 @@ void manager_cleanup(struct manager *mgr)
 					SAMSUNG_MODEM_MANAGER_INTERFACE);
 
 	ipc_client_free(mgr->client);
+	rfs_manager_free(mgr->rfs);
 
 	g_free(mgr);
 }

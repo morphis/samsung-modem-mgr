@@ -9,6 +9,7 @@ src_samsung_modem_mgr_SOURCES = \
 	src/main.c \
 	src/dbus.c \
 	src/manager.c \
+	src/rfs.c \
 	gdbus/mainloop.c \
 	gdbus/object.c \
 	gdbus/watch.c \
