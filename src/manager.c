@@ -112,24 +112,33 @@ static int set_powered(DBusConnection *conn, struct manager *mgr, gboolean power
 
 	if (powered)
 	{
+		g_debug("Powering modem up ...");
+
 		mgr->state = INITIALIZING;
 
 		notify_status_changed(conn, mgr->state);
 
 		if (ipc_client_bootstrap_modem(mgr->client) < 0 ||
-			ipc_client_power_on(mgr->client) < 0 ||
-			rfs_manager_start(mgr->rfs) < 0) {
-			mgr->state = OFFLINE;
+			ipc_client_power_on(mgr->client) < 0) {
+			/* now start up the RFS client */
+			if (rfs_manager_start(mgr->rfs) < 0) {
+				g_error("Can't start RFS manager. Shutting down ...");
+				ipc_client_power_off(mgr->client);
+				mgr->state = OFFLINE;
+			}
 		}
 		else {
 			notify_powered_changed(conn, powered);
 			mgr->powered = powered;
 			mgr->state = ONLINE;
+			g_debug("Everything fine, modem is ready now.");
 		}
 	}
 	else {
+		g_debug("Stopping RFS manager ...");
 		rfs_manager_stop(mgr->rfs);
 
+		g_debug("Powering modem down ...");
 		ipc_client_power_off(mgr->client);
 
 		mgr->powered = powered;
@@ -251,6 +260,9 @@ int manager_init(struct manager *mgr)
 void manager_cleanup(struct manager *mgr)
 {
 	DBusConnection *conn = get_dbus_connection();
+
+	if (mgr->state == ONLINE)
+		set_powered(conn, mgr, FALSE);
 
 	g_dbus_unregister_interface(conn, SAMSUNG_MODEM_MANAGER_PATH,
 					SAMSUNG_MODEM_MANAGER_INTERFACE);
