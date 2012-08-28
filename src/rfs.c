@@ -52,9 +52,11 @@ static gboolean received_data(GIOChannel *channel, GIOCondition cond,
 
 	switch (resp.cmd) {
 	case IPC_RFS_NV_READ_ITEM:
+		g_debug("Received IPC_RFS_NV_READ_ITEM request");
 		ipc_rfs_send_io_confirm_for_nv_read_item(mgr->client, &resp);
 		break;
 	case IPC_RFS_NV_WRITE_ITEM:
+		g_debug("Received IPC_RFS_NV_WRITE_ITEM request");
 		ipc_rfs_send_io_confirm_for_nv_write_item(mgr->client, &resp);
 		break;
 	}
@@ -84,6 +86,11 @@ struct rfs_manager* rfs_manager_new(void)
 	return mgr;
 }
 
+static void log_handler(const char *message, void *user_data)
+{
+	g_debug("%s", message);
+}
+
 int rfs_manager_start(struct rfs_manager *mgr)
 {
 	int fd;
@@ -91,7 +98,11 @@ int rfs_manager_start(struct rfs_manager *mgr)
 	if (!mgr)
 		return -1;
 
+	g_debug("Starting up RFS manager ...");
+
+	ipc_client_create_handlers_common_data(mgr->client);
 	ipc_client_open(mgr->client);
+	ipc_client_set_log_handler(mgr->client, log_handler, NULL);
 
 	fd = ipc_client_get_handlers_common_data_fd(mgr->client);
 
@@ -117,8 +128,13 @@ int rfs_manager_stop(struct rfs_manager *mgr)
 	if (!mgr)
 		return -1;
 
+	g_debug("Stopping RFS manager ...");
+
 	if (mgr->read_watch > 0)
 		g_source_remove(mgr->read_watch);
+
+	ipc_client_close(mgr->client);
+	ipc_client_destroy_handlers_common_data(mgr->client);
 
 	return 0;
 }

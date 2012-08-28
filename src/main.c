@@ -153,6 +153,12 @@ static GOptionEntry options[] = {
 	{ NULL },
 };
 
+static void debug_handler(const gchar *log_domain, GLogLevelFlags log_level,
+						const gchar *message, gpointer user_data)
+{
+	g_print("DEBUG: %s\n", message);
+}
+
 int main(int argc, char **argv)
 {
 	GOptionContext *context;
@@ -162,6 +168,8 @@ int main(int argc, char **argv)
 	int rc;
 
 	g_message("Samsung Modem Manager %s", VERSION);
+
+	g_log_set_handler (NULL, G_LOG_LEVEL_DEBUG, debug_handler, NULL);
 
 	context = g_option_context_new(NULL);
 	g_option_context_add_main_entries(context, options, NULL);

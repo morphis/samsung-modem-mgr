@@ -120,18 +120,22 @@ static int set_powered(DBusConnection *conn, struct manager *mgr, gboolean power
 
 		if (ipc_client_bootstrap_modem(mgr->client) < 0 ||
 			ipc_client_power_on(mgr->client) < 0) {
+			g_error("Can't bootstrap and power on the modem");
+			mgr->state = OFFLINE;
+		}
+		else {
 			/* now start up the RFS client */
 			if (rfs_manager_start(mgr->rfs) < 0) {
 				g_error("Can't start RFS manager. Shutting down ...");
 				ipc_client_power_off(mgr->client);
 				mgr->state = OFFLINE;
 			}
-		}
-		else {
-			notify_powered_changed(conn, powered);
-			mgr->powered = powered;
-			mgr->state = ONLINE;
-			g_debug("Everything fine, modem is ready now.");
+			else {
+				notify_powered_changed(conn, powered);
+				mgr->powered = powered;
+				mgr->state = ONLINE;
+				g_debug("Everything fine, modem is ready now.");
+			}
 		}
 	}
 	else {
@@ -219,6 +223,10 @@ static const GDBusSignalTable manager_signals[] = {
 	{ }
 };
 
+static void log_handler(const char *message, void *user_data)
+{
+	g_debug("%s", message);
+}
 
 struct manager *manager_create(void)
 {
@@ -232,6 +240,7 @@ struct manager *manager_create(void)
 	mgr->state = OFFLINE;
 	mgr->powered = FALSE;
 	mgr->client = ipc_client_new(IPC_CLIENT_TYPE_FMT);
+	ipc_client_set_log_handler(mgr->client, log_handler, NULL);
 	mgr->rfs = rfs_manager_new();
 
 	return mgr;
